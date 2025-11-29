@@ -1,0 +1,11 @@
+# Sử dụng image Nginx làm base image
+FROM nginx:stable-alpine
+
+# Xóa nội dung mặc định của Nginx và sao chép mã nguồn 2048 vào
+COPY . /usr/share/nginx/html
+
+# Mở cổng 80 (cổng HTTP mặc định)
+EXPOSE 80
+
+# Lệnh mặc định khi container khởi động
+CMD ["nginx", "-g", "daemon off;"]
