@@ -1,0 +1,49 @@
+version: 0.2
+
+# Định nghĩa các biến môi trường
+# THAY THẾ CÁC GIÁ TRỊ SAU BẰNG THÔNG TIN CỦA BẠN
+# Ví dụ: 123456789012
+# Ví dụ: ap-southeast-1
+# Ví dụ: 2048-game-repo
+env:
+  variables:
+    AWS_ACCOUNT_ID: "591570009558"
+    AWS_DEFAULT_REGION: "us-east-1" 
+    IMAGE_REPO_NAME: "2048-game-repo"
+    IMAGE_TAG: "latest" # Hoặc sử dụng ID commit
+    
+phases:
+  install:
+    commands:
+      # Lệnh cài đặt phụ thuộc nếu cần (không cần cho ứng dụng tĩnh)
+
+  pre_build:
+    commands:
+      # 1. Đăng nhập vào ECR
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      
+      # 2. Định nghĩa tên image
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - echo Repository URI is $REPOSITORY_URI
+
+  build:
+    commands:
+      # 3. Build Docker Image (sử dụng Dockerfile đã tạo ở Bước 1)
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+
+  post_build:
+    commands:
+      # 4. Push Image lên ECR
+      - echo Pushing the Docker image...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      
+      # 5. Tạo file định nghĩa tác vụ (Task Definition) cho ECS
+      - echo Creating image definitions file...
+      - printf '[{"name":"2048-container","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      
+artifacts:
+  files:
+    # CodePipeline sẽ sử dụng file này để cập nhật ECS Service
+    - imagedefinitions.json
